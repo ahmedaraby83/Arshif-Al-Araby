@@ -44,7 +44,6 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void refresh(String q,String group){runOnUiThread(()->sendData(q,group));}
         @JavascriptInterface public void open(long id){runOnUiThread(()->findAndOpen(id,false));}
         @JavascriptInterface public void share(long id){runOnUiThread(()->findAndOpen(id,true));}
-        @JavascriptInterface public void move(long id){runOnUiThread(()->moveDialog(id));}
         @JavascriptInterface public void delete(long id){runOnUiThread(()->confirmDelete(id));}
         @JavascriptInterface public void move(long id){runOnUiThread(()->moveDialog(id));}
         @JavascriptInterface public void edit(long id){runOnUiThread(()->editDialog(id));}
@@ -60,13 +59,6 @@ public class MainActivity extends Activity {
     }
     ArchiveDb.Item find(long id){return db.find(id);}
     void findAndOpen(long id,boolean share){ArchiveDb.Item i=find(id);if(i!=null)openFile(i,share);}
-    void moveDialog(long id){
-        ArchiveDb.Item item=find(id);if(item==null){toast("الملف غير موجود");return;}
-        java.util.List<ArchiveDb.Group> tree=db.groupTree();java.util.List<String> destinations=new java.util.ArrayList<>(),labels=new java.util.ArrayList<>();
-        for(ArchiveDb.Group g:tree){if(g.name.equals(item.groupName))continue;destinations.add(g.name);String path=g.name,parent=g.parent;java.util.Set<String> seen=new java.util.HashSet<>();seen.add(g.name);while(parent!=null&&!parent.isEmpty()&&seen.add(parent)){path=parent+" / "+path;String next=null;for(ArchiveDb.Group ancestor:tree)if(ancestor.name.equals(parent)){next=ancestor.parent;break;}parent=next;}labels.add(path);}
-        if(destinations.isEmpty()){toast("أنشئ مجموعة أخرى لنقل الملف إليها");return;}
-        final int[] choice={-1};AlertDialog dialog=new AlertDialog.Builder(this).setTitle("نقل «"+item.title+"»").setSingleChoiceItems(labels.toArray(new String[0]),-1,(d,w)->{choice[0]=w;((AlertDialog)d).getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);}).setPositiveButton("نقل",(d,w)->{if(choice[0]<0)return;String destination=destinations.get(choice[0]);if(db.move(id,destination)){web.evaluateJavascript("reload()",null);toast("تم النقل إلى «"+destination+"»");queueFolderSync();}else toast("تعذر نقل الملف؛ حاول مرة أخرى");}).setNegativeButton("إلغاء",null).create();dialog.setOnShowListener(d->{dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);dialog.getWindow().getDecorView().setLayoutDirection(View.LAYOUT_DIRECTION_RTL);});dialog.show();
-    }
     void confirmDelete(long id){ArchiveDb.Item i=find(id);if(i==null)return;new AlertDialog.Builder(this).setTitle("حذف المستند؟").setMessage("سيتم حذف «"+i.title+"» من الهاتف. ستبقى النسخ القديمة على التخزين السحابي.").setPositiveButton("حذف",(d,w)->{db.trash(i.id,true);sendData("","");toast("تم النقل إلى سلة المحذوفات");queueFolderSync();}).setNegativeButton("إلغاء",null).show();}
 
     void pickFile(){String[] options={"ملف PDF أو صورة واحدة","عدة صور"};new AlertDialog.Builder(this).setTitle("إضافة مستند").setItems(options,(d,w)->{if(w==0)pickSingleDocument();else pickMultipleImages();}).setNegativeButton("إلغاء",null).show();}
