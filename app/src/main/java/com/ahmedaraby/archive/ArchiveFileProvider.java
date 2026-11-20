@@ -24,7 +24,7 @@ public class ArchiveFileProvider extends ContentProvider {
     }
     @Override public boolean onCreate(){return true;}
     @Override public String getType(Uri uri){String n=uri.getLastPathSegment();String e=android.webkit.MimeTypeMap.getFileExtensionFromUrl(n);String t=android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(e);return t==null?"application/octet-stream":t;}
-    @Override public ParcelFileDescriptor openFile(Uri uri,String mode)throws FileNotFoundException{return ParcelFileDescriptor.open(resolve(uri),ParcelFileDescriptor.MODE_READ_ONLY);}
+    @Override public ParcelFileDescriptor openFile(Uri uri,String mode)throws FileNotFoundException{return ParcelFileDescriptor.open(resolve(uri),mode!=null&&mode.contains("w")?ParcelFileDescriptor.MODE_READ_WRITE:ParcelFileDescriptor.MODE_READ_ONLY);}
     @Override public Cursor query(Uri uri,String[] projection,String selection,String[] selectionArgs,String sortOrder){
         try{File f=resolve(uri);MatrixCursor c=new MatrixCursor(new String[]{OpenableColumns.DISPLAY_NAME,OpenableColumns.SIZE});c.addRow(new Object[]{f.getName(),f.length()});return c;}catch(Exception e){return null;}
     }
