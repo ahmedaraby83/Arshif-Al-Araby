@@ -19,7 +19,7 @@ import java.util.concurrent.Executors;
 import org.json.*;
 
 public class MainActivity extends Activity {
-    static final int PICK_FILE=10, PICK_BACKUP_FOLDER=11, PICK_RESTORE=12, PICK_SYNC_FOLDER=13;
+    static final int PICK_FILE=10, PICK_BACKUP_FOLDER=11, PICK_RESTORE=12, PICK_SYNC_FOLDER=13, PICK_MULTIPLE_IMAGES=14;
     ArchiveDb db; WebView web; Uri pendingUri,backupFolder;
     ArrayList<Uri> pendingUris=new ArrayList<>();
     private final ExecutorService fileJobs=Executors.newSingleThreadExecutor();
@@ -66,28 +66,76 @@ public class MainActivity extends Activity {
     void confirmDelete(long id){ArchiveDb.Item i=find(id);if(i==null)return;new AlertDialog.Builder(this).setTitle("حذف المستند؟").setMessage("سيتم حذف «"+i.title+"» من الهاتف. ستبقى النسخ القديمة على التخزين السحابي.").setPositiveButton("حذف",(d,w)->{new File(getFilesDir(),"docs/"+i.fileName).delete();db.delete(i.id);sendData("","");toast("تم حذف المستند");queueFolderSync();}).setNegativeButton("إلغاء",null).show();}
 
     void pickFile(){
-        Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);i.addCategory(Intent.CATEGORY_OPENABLE);i.setType("*/*");
+        String[] options={"ملف PDF أو صورة واحدة","عدة صور"};
+        new AlertDialog.Builder(this)
+                .setTitle("إضافة مستند")
+                .setItems(options,(dialog,which)->{
+                    if(which==0)pickSingleDocument();
+                    else pickMultipleImages();
+                })
+                .setNegativeButton("إلغاء",null)
+                .show();
+    }
+    void pickSingleDocument(){
+        Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        i.addCategory(Intent.CATEGORY_OPENABLE);
+        i.setType("*/*");
         i.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"application/pdf","image/*"});
-        i.putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true);startActivityForResult(i,PICK_FILE);
+        i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        startActivityForResult(i,PICK_FILE);
+    }
+    void pickMultipleImages(){
+        Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        i.addCategory(Intent.CATEGORY_OPENABLE);
+        i.setType("image/*");
+        i.putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true);
+        i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        startActivityForResult(Intent.createChooser(i,"اختر عدة صور"),PICK_MULTIPLE_IMAGES);
     }
     @Override protected void onActivityResult(int r,int result,Intent data){
-        super.onActivityResult(r,result,data);if(result!=RESULT_OK||data==null||data.getData()==null)return;
+        super.onActivityResult(r,result,data);
+        if(result!=RESULT_OK||data==null)return;
+
         if(r==PICK_FILE){
-            pendingUris.clear();
-            if(data.getClipData()!=null){for(int x=0;x<data.getClipData().getItemCount();x++)pendingUris.add(data.getClipData().getItemAt(x).getUri());}
-            else pendingUris.add(data.getData());
-            if(pendingUris.size()==1){pendingUri=pendingUris.get(0);showAddDialog();}
-            else if(allImages(pendingUris))showMultiImageChoice();
-            else toast("عند اختيار عدة ملفات يجب أن تكون جميعها صورًا");
+            pendingUri=data.getData();
+            if(pendingUri==null){toast("لم يتم اختيار ملف");return;}
+            showAddDialog();
         }
-        else if(r==PICK_BACKUP_FOLDER)writeBackupFile(data.getData());
-        else if(r==PICK_RESTORE)confirmRestore(data.getData());
+        else if(r==PICK_MULTIPLE_IMAGES){
+            pendingUris.clear();
+            ClipData clipData=data.getClipData();
+            if(clipData!=null){
+                for(int x=0;x<clipData.getItemCount();x++){
+                    Uri uri=clipData.getItemAt(x).getUri();
+                    if(uri!=null)pendingUris.add(uri);
+                }
+            }else if(data.getData()!=null){
+                pendingUris.add(data.getData());
+            }
+            if(pendingUris.isEmpty()){toast("لم يتم اختيار صور");return;}
+            if(!allImages(pendingUris)){toast("يجب أن تكون جميع الملفات المختارة صورًا");pendingUris.clear();return;}
+            if(pendingUris.size()==1){pendingUri=pendingUris.get(0);showAddDialog();}
+            else showMultiImageChoice();
+        }
+        else if(r==PICK_BACKUP_FOLDER){
+            Uri uri=data.getData();
+            if(uri!=null)writeBackupFile(uri);
+        }
+        else if(r==PICK_RESTORE){
+            Uri uri=data.getData();
+            if(uri!=null)confirmRestore(uri);
+        }
         else if(r==PICK_SYNC_FOLDER){
             backupFolder=data.getData();
-            try{getContentResolver().takePersistableUriPermission(backupFolder,Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION);}
-            catch(SecurityException error){toast("تعذر حفظ إذن المجلد");return;}
-            getPreferences(0).edit().putString("backup",backupFolder.toString()).putBoolean("syncPending",true).apply();
-            toast("جارٍ نسخ الملفات والمجموعات إلى المجلد المحدد");queueFolderSync();
+            if(backupFolder==null)return;
+            try{
+                getContentResolver().takePersistableUriPermission(backupFolder,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            }catch(SecurityException error){toast("تعذر حفظ إذن المجلد");return;}
+            getPreferences(0).edit().putString("backup",backupFolder.toString())
+                    .putBoolean("syncPending",true).apply();
+            toast("جارٍ نسخ الملفات والمجموعات إلى المجلد المحدد");
+            queueFolderSync();
         }
     }
 
