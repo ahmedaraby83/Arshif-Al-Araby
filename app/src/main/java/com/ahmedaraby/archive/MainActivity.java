@@ -6,15 +6,19 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.app.KeyguardManager;
 import android.graphics.*;
+import android.graphics.Insets;
 import android.graphics.pdf.PdfDocument;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.OpenableColumns;
 import android.provider.DocumentsContract;
 import android.webkit.*;
+import android.util.Log;
 import android.view.View;
 import android.view.Window;
+import android.view.WindowInsets;
 import android.view.WindowManager;
+import android.widget.FrameLayout;
 import android.widget.*;
 import java.io.*;
 import java.util.*;
@@ -24,43 +28,58 @@ import org.json.*;
 
 public class MainActivity extends Activity {
     static final int PICK_FILE=10,PICK_BACKUP_FOLDER=11,PICK_RESTORE=12,PICK_SYNC_FOLDER=13,PICK_MULTIPLE_IMAGES=14,CAPTURE_SCAN=15,UNLOCK_APP=16;
-    ArchiveDb db; WebView web; Uri pendingUri,backupFolder,cameraUri; ArrayList<Uri> pendingUris=new ArrayList<>(); boolean unlocked=false;
+    ArchiveDb db; FrameLayout root; WebView web; Uri pendingUri,backupFolder,cameraUri; ArrayList<Uri> pendingUris=new ArrayList<>(); boolean unlocked=false;
     private final ExecutorService fileJobs=Executors.newSingleThreadExecutor();
 
     @Override public void onCreate(Bundle state){
-        super.onCreate(state);applySystemTheme("dark");
-        db=new ArchiveDb(this);backupFolder=loadBackupFolder();web=new WebView(this);web.setBackgroundColor(0xff06101a);
+        super.onCreate(state);applySystemBarTheme(false);
+        db=new ArchiveDb(this);backupFolder=loadBackupFolder();root=new FrameLayout(this);root.setBackgroundColor(Color.parseColor("#06101A"));web=new WebView(this);web.setBackgroundColor(0xff06101a);
         WebSettings s=web.getSettings();s.setJavaScriptEnabled(true);s.setDomStorageEnabled(true);s.setAllowFileAccess(true);s.setDefaultTextEncodingName("UTF-8");
-        web.addJavascriptInterface(new Bridge(),"Archive");web.setWebViewClient(new WebViewClient(){@Override public void onPageFinished(WebView v,String u){sendData("","");if(getPreferences(0).getBoolean("syncPending",false))queueFolderSync();}});web.setWebChromeClient(new WebChromeClient());
-        setContentView(web);
+        web.addJavascriptInterface(new Bridge(),"Archive");web.setWebViewClient(new WebViewClient(){@Override public void onPageFinished(WebView v,String u){v.evaluateJavascript("document.body.classList.add('android-webview');document.body.classList.remove('browser-preview');",null);sendData("","");if(getPreferences(0).getBoolean("syncPending",false))queueFolderSync();}});web.setWebChromeClient(new WebChromeClient());
+        root.addView(web,new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,FrameLayout.LayoutParams.MATCH_PARENT));
+        setContentView(root);
         if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.M){
-            web.setOnApplyWindowInsetsListener((view,insets)->{
-                view.setPadding(view.getPaddingLeft(),insets.getSystemWindowInsetTop(),view.getPaddingRight(),insets.getSystemWindowInsetBottom());
+            root.setOnApplyWindowInsetsListener((view,insets)->{
+                int statusTop,navigationBottom,leftInset,rightInset;
+                if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.R){
+                    Insets systemBars=insets.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout());
+                    statusTop=systemBars.top;
+                    navigationBottom=systemBars.bottom;
+                    leftInset=systemBars.left;
+                    rightInset=systemBars.right;
+                }else{
+                    statusTop=insets.getSystemWindowInsetTop();
+                    navigationBottom=insets.getSystemWindowInsetBottom();
+                    leftInset=insets.getSystemWindowInsetLeft();
+                    rightInset=insets.getSystemWindowInsetRight();
+                }
+                Log.d("ArshifInsets","top="+statusTop+", bottom="+navigationBottom+", left="+leftInset+", right="+rightInset);
+                view.setPadding(leftInset,statusTop,rightInset,navigationBottom);
                 return insets;
             });
-            web.requestApplyInsets();
+            root.requestApplyInsets();
         }
         web.loadUrl("file:///android_asset/index.html");
     }
 
-    void applySystemTheme(String theme){
-        if(!"dark".equals(theme)&&!"light".equals(theme))return;
-        boolean light="light".equals(theme);
+    private void applySystemBarTheme(boolean lightTheme){
         Window window=getWindow();
-        window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS|WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION|WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
+        window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS|WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION);
         window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
-        if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.R)window.setDecorFitsSystemWindows(true);
-        int barColor=light?0xfff5f2eb:0xff06101a;
-        window.setStatusBarColor(barColor);window.setNavigationBarColor(barColor);
+        int color=Color.parseColor(lightTheme?"#F5F2EB":"#06101A");
+        window.setStatusBarColor(color);window.setNavigationBarColor(color);
         View decor=window.getDecorView();
-        int flags=light?View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR:0;
+        int flags=0;
+        if(lightTheme&&Build.VERSION.SDK_INT>=Build.VERSION_CODES.M)flags|=View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+        if(lightTheme&&Build.VERSION.SDK_INT>=Build.VERSION_CODES.O)flags|=View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
         decor.setSystemUiVisibility(flags);
-        if(web!=null)web.setBackgroundColor(barColor);
+        if(root!=null)root.setBackgroundColor(color);
+        if(web!=null)web.setBackgroundColor(color);
     }
 
     public class Bridge {
         @JavascriptInterface public void unlockApp(){runOnUiThread(()->requestUnlock());}
-        @JavascriptInterface public void setTheme(String theme){runOnUiThread(()->applySystemTheme(theme));}
+        @JavascriptInterface public void setTheme(String theme){if(!"dark".equals(theme)&&!"light".equals(theme))return;runOnUiThread(()->applySystemBarTheme("light".equals(theme)));}
         @JavascriptInterface public void addDocument(){runOnUiThread(()->pickFile());}
         @JavascriptInterface public void scanDocument(){runOnUiThread(()->startScanSeries(true));}
         @JavascriptInterface public void addGroup(){runOnUiThread(()->newGroup(null));}
