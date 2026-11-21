@@ -54,7 +54,7 @@
   </button>
   <div class="brand">
     <img class="brand-mark" src="araby-premium-emblem.webp" alt="">
-    <div><b>أرشيف العربي</b><small>مساحتك الخاصة · 9.0.2</small></div>
+    <div><b>أرشيف العربي</b><small>مساحتك الخاصة · 9.0.3</small></div>
   </div>
   <button id="themeToggle" class="header-btn header-theme" type="button" onclick="toggleTheme()" aria-label="تغيير الثيم"></button>
 </header>
@@ -186,13 +186,28 @@
   </button>
 </nav>
 
+<div id="documentActionShade" class="action-shade" hidden onclick="closeDocumentMenu()"></div>
+<section id="documentActionSheet" class="document-action-sheet" aria-modal="true" role="dialog" aria-labelledby="documentActionTitle" hidden>
+  <div class="sheet-handle" aria-hidden="true"></div>
+  <div class="sheet-header">
+    <div>
+      <h3 id="documentActionTitle">إجراءات المستند</h3>
+      <p id="documentActionName"></p>
+    </div>
+    <button type="button" class="sheet-close-button" aria-label="إغلاق" title="إغلاق" onclick="closeDocumentMenu()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+    </button>
+  </div>
+  <div id="documentActionList" class="document-action-list"></div>
+</section>
+
 <div id="shade" class="shade" onclick="closeDrawer()"></div>
 <aside id="drawer" class="drawer">
   <div class="drawer-head"><div class="drawer-mark">العربي</div><div><b>أرشيف العربي</b><small>مستنداتك منظمة وآمنة</small></div></div>
   <button type="button" onclick="showHome()">الرئيسية</button>
   <button type="button" onclick="openGroups()">المجموعات</button>
   <button type="button" onclick="openBackup()">النسخ والاستعادة</button>
-  <button type="button" onclick="toast('الإصدار 9.0.2')">معلومات التطبيق</button>
+  <button type="button" onclick="toast('الإصدار 9.0.3')">معلومات التطبيق</button>
 </aside>
 <div id="toast" class="toast"></div>
 </div>
