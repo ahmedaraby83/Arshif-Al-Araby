@@ -6,12 +6,19 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.app.KeyguardManager;
 import android.graphics.*;
+import android.graphics.Insets;
 import android.graphics.pdf.PdfDocument;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.OpenableColumns;
 import android.provider.DocumentsContract;
 import android.webkit.*;
+import android.util.Log;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowInsets;
+import android.view.WindowManager;
+import android.widget.FrameLayout;
 import android.widget.*;
 import java.io.*;
 import java.util.*;
@@ -21,20 +28,58 @@ import org.json.*;
 
 public class MainActivity extends Activity {
     static final int PICK_FILE=10,PICK_BACKUP_FOLDER=11,PICK_RESTORE=12,PICK_SYNC_FOLDER=13,PICK_MULTIPLE_IMAGES=14,CAPTURE_SCAN=15,UNLOCK_APP=16;
-    ArchiveDb db; WebView web; Uri pendingUri,backupFolder,cameraUri; ArrayList<Uri> pendingUris=new ArrayList<>(); boolean unlocked=false;
+    ArchiveDb db; FrameLayout root; WebView web; Uri pendingUri,backupFolder,cameraUri; ArrayList<Uri> pendingUris=new ArrayList<>(); boolean unlocked=false;
     private final ExecutorService fileJobs=Executors.newSingleThreadExecutor();
 
     @Override public void onCreate(Bundle state){
-        super.onCreate(state);getWindow().setStatusBarColor(0xff10182b);getWindow().setNavigationBarColor(0xff10182b);
-        getWindow().getDecorView().setSystemUiVisibility(0);
-        db=new ArchiveDb(this);backupFolder=loadBackupFolder();web=new WebView(this);web.setBackgroundColor(0xff10182b);
+        super.onCreate(state);applySystemBarTheme(false);
+        db=new ArchiveDb(this);backupFolder=loadBackupFolder();root=new FrameLayout(this);root.setBackgroundColor(Color.parseColor("#06101A"));web=new WebView(this);web.setBackgroundColor(0xff06101a);
         WebSettings s=web.getSettings();s.setJavaScriptEnabled(true);s.setDomStorageEnabled(true);s.setAllowFileAccess(true);s.setDefaultTextEncodingName("UTF-8");
-        web.addJavascriptInterface(new Bridge(),"Archive");web.setWebViewClient(new WebViewClient(){@Override public void onPageFinished(WebView v,String u){sendData("","");if(getPreferences(0).getBoolean("syncPending",false))queueFolderSync();}});web.setWebChromeClient(new WebChromeClient());
-        setContentView(web);web.loadUrl("file:///android_asset/index.html");
+        web.addJavascriptInterface(new Bridge(),"Archive");web.setWebViewClient(new WebViewClient(){@Override public void onPageFinished(WebView v,String u){v.evaluateJavascript("document.body.classList.add('android-webview');document.body.classList.remove('browser-preview');",null);sendData("","");if(getPreferences(0).getBoolean("syncPending",false))queueFolderSync();}});web.setWebChromeClient(new WebChromeClient());
+        root.addView(web,new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT,FrameLayout.LayoutParams.MATCH_PARENT));
+        setContentView(root);
+        if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.M){
+            root.setOnApplyWindowInsetsListener((view,insets)->{
+                int statusTop,navigationBottom,leftInset,rightInset;
+                if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.R){
+                    Insets systemBars=insets.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout());
+                    statusTop=systemBars.top;
+                    navigationBottom=systemBars.bottom;
+                    leftInset=systemBars.left;
+                    rightInset=systemBars.right;
+                }else{
+                    statusTop=insets.getSystemWindowInsetTop();
+                    navigationBottom=insets.getSystemWindowInsetBottom();
+                    leftInset=insets.getSystemWindowInsetLeft();
+                    rightInset=insets.getSystemWindowInsetRight();
+                }
+                Log.d("ArshifInsets","top="+statusTop+", bottom="+navigationBottom+", left="+leftInset+", right="+rightInset);
+                view.setPadding(leftInset,statusTop,rightInset,navigationBottom);
+                return insets;
+            });
+            root.requestApplyInsets();
+        }
+        web.loadUrl("file:///android_asset/index.html");
+    }
+
+    private void applySystemBarTheme(boolean lightTheme){
+        Window window=getWindow();
+        window.clearFlags(WindowManager.LayoutParams.FLAG_TRANSLUCENT_STATUS|WindowManager.LayoutParams.FLAG_TRANSLUCENT_NAVIGATION);
+        window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+        int color=Color.parseColor(lightTheme?"#F5F2EB":"#06101A");
+        window.setStatusBarColor(color);window.setNavigationBarColor(color);
+        View decor=window.getDecorView();
+        int flags=0;
+        if(lightTheme&&Build.VERSION.SDK_INT>=Build.VERSION_CODES.M)flags|=View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+        if(lightTheme&&Build.VERSION.SDK_INT>=Build.VERSION_CODES.O)flags|=View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+        decor.setSystemUiVisibility(flags);
+        if(root!=null)root.setBackgroundColor(color);
+        if(web!=null)web.setBackgroundColor(color);
     }
 
     public class Bridge {
         @JavascriptInterface public void unlockApp(){runOnUiThread(()->requestUnlock());}
+        @JavascriptInterface public void setTheme(String theme){if(!"dark".equals(theme)&&!"light".equals(theme))return;runOnUiThread(()->applySystemBarTheme("light".equals(theme)));}
         @JavascriptInterface public void addDocument(){runOnUiThread(()->pickFile());}
         @JavascriptInterface public void scanDocument(){runOnUiThread(()->startScanSeries(true));}
         @JavascriptInterface public void addGroup(){runOnUiThread(()->newGroup(null));}
@@ -47,6 +92,8 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void open(long id){runOnUiThread(()->findAndOpen(id,false));}
         @JavascriptInterface public void share(long id){runOnUiThread(()->findAndOpen(id,true));}
         @JavascriptInterface public void move(long id){runOnUiThread(()->moveDialog(id));}
+        @JavascriptInterface public void favorite(long id){runOnUiThread(()->{if(db.toggleFavorite(id)){sendData("","");}else toast("تعذر تغيير المفضلة");});}
+        @JavascriptInterface public void edit(long id){runOnUiThread(()->editDialog(id));}
         @JavascriptInterface public void delete(long id){runOnUiThread(()->confirmDelete(id));}
         @JavascriptInterface public void exit(){runOnUiThread(()->finish());}
         @JavascriptInterface public String groups(){return groupsJson();}
@@ -54,7 +101,27 @@ public class MainActivity extends Activity {
 
     String groupsJson(){JSONArray a=new JSONArray();try{for(ArchiveDb.Group g:db.groupTree()){JSONObject o=new JSONObject();o.put("name",g.name);o.put("parent",g.parent==null?JSONObject.NULL:g.parent);a.put(o);}}catch(Exception ignored){}return a.toString();}
     void sendData(String q,String group){
-        try{JSONArray a=new JSONArray(),all=new JSONArray();for(ArchiveDb.Item i:db.search("","")){JSONObject o=new JSONObject();o.put("id",i.id);o.put("title",i.title);o.put("group",i.groupName);o.put("notes",i.notes==null?"":i.notes);o.put("tags",i.tags==null?"":i.tags);o.put("mime",i.mime==null?"":i.mime);o.put("date",i.createdAt);all.put(o);}for(ArchiveDb.Item i:db.search(q==null?"":q,group==null?"":group)){JSONObject o=new JSONObject();o.put("id",i.id);o.put("title",i.title);o.put("group",i.groupName);o.put("notes",i.notes==null?"":i.notes);o.put("tags",i.tags==null?"":i.tags);o.put("mime",i.mime==null?"":i.mime);o.put("date",i.createdAt);a.put(o);}String js="window.renderArchive("+JSONObject.quote(groupsJson())+","+a.toString()+","+all.toString()+")";web.evaluateJavascript(js,null);}catch(Exception e){toast("تعذر عرض المستندات");}
+        try{
+            JSONArray a=new JSONArray(),all=new JSONArray();
+            java.util.List<ArchiveDb.Item> allItems=db.search("","");
+            java.util.List<ArchiveDb.Item> filtered=db.search(q==null?"":q,group==null?"":group);
+            for(ArchiveDb.Item i:allItems){all.put(itemJson(i));}
+            for(ArchiveDb.Item i:filtered){a.put(itemJson(i));}
+            String js="window.renderArchive("+JSONObject.quote(groupsJson())+","+a.toString()+","+all.toString()+")";
+            web.evaluateJavascript(js,null);
+        }catch(Exception e){toast("تعذر عرض المستندات");}
+    }
+    JSONObject itemJson(ArchiveDb.Item i)throws JSONException{
+        JSONObject o=new JSONObject();
+        o.put("id",i.id);o.put("title",i.title);o.put("group",i.groupName);
+        o.put("notes",i.notes==null?"":i.notes);o.put("tags",i.tags==null?"":i.tags);
+        o.put("mime",i.mime==null?"":i.mime);o.put("date",i.createdAt);
+        o.put("favorite",i.favorite);
+        File f=new File(getFilesDir(),"docs/"+i.fileName);
+        long bytes=f.exists()?f.length():0;
+        String size=bytes<1024?(bytes+" ب"):bytes<1048576?(String.format(java.util.Locale.US,"%.1f ك.ب",bytes/1024.0)):(String.format(java.util.Locale.US,"%.1f م.ب",bytes/1048576.0));
+        o.put("size",bytes>0?size:"");
+        return o;
     }
     ArchiveDb.Item find(long id){for(ArchiveDb.Item i:db.search("",""))if(i.id==id)return i;return null;}
     void findAndOpen(long id,boolean share){ArchiveDb.Item i=find(id);if(i!=null)openFile(i,share);}
@@ -66,6 +133,17 @@ public class MainActivity extends Activity {
         final int[] choice={-1};AlertDialog dialog=new AlertDialog.Builder(this).setTitle("نقل «"+item.title+"»").setSingleChoiceItems(labels.toArray(new String[0]),-1,(d,w)->{choice[0]=w;((AlertDialog)d).getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);}).setPositiveButton("نقل",(d,w)->{if(choice[0]<0)return;String destination=destinations.get(choice[0]);if(db.move(id,destination)){web.evaluateJavascript("reload()",null);toast("تم النقل إلى «"+destination+"»");queueFolderSync();}else toast("تعذر نقل الملف؛ حاول مرة أخرى");}).setNegativeButton("إلغاء",null).create();dialog.setOnShowListener(d->{dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);dialog.getWindow().getDecorView().setLayoutDirection(View.LAYOUT_DIRECTION_RTL);});dialog.show();
     }
     void confirmDelete(long id){ArchiveDb.Item i=find(id);if(i==null)return;new AlertDialog.Builder(this).setTitle("حذف المستند؟").setMessage("سيتم حذف «"+i.title+"» من الهاتف. ستبقى النسخ القديمة على التخزين السحابي.").setPositiveButton("حذف",(d,w)->{new File(getFilesDir(),"docs/"+i.fileName).delete();db.delete(i.id);sendData("","");toast("تم حذف المستند");queueFolderSync();}).setNegativeButton("إلغاء",null).show();}
+    void editDialog(long id){
+        ArchiveDb.Item item=find(id);if(item==null)return;
+        LinearLayout box=new LinearLayout(this);box.setPadding(36,8,36,0);box.setOrientation(LinearLayout.VERTICAL);box.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        EditText title=new EditText(this);title.setHint("اسم المستند");title.setText(item.title);
+        EditText notes=new EditText(this);notes.setHint("ملاحظات");notes.setText(item.notes);
+        EditText tags=new EditText(this);tags.setHint("كلمات مفتاحية");tags.setText(item.tags);
+        Spinner groups=new Spinner(this);groups.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,db.groups()));
+        for(int x=0;x<db.groups().size();x++)if(db.groups().get(x).equals(item.groupName)){groups.setSelection(x);break;}
+        for(View v:new View[]{title,groups,notes,tags})box.addView(v);
+        new AlertDialog.Builder(this).setTitle("تعديل المستند").setView(box).setPositiveButton("حفظ",(d,w)->{if(db.edit(id,title.getText().toString().trim(),notes.getText().toString().trim(),tags.getText().toString().trim(),groups.getSelectedItem().toString())){sendData("","");toast("تم حفظ التعديل");queueFolderSync();}else toast("تعذر حفظ التعديل");}).setNegativeButton("إلغاء",null).show();
+    }
 
     void requestUnlock(){
         KeyguardManager km=(KeyguardManager)getSystemService(KEYGUARD_SERVICE);
