@@ -1,17 +1,201 @@
-<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="stylesheet" href="theme.css"></head><body><div id="authScreen" class="authScreen" aria-label="شاشة الدخول إلى أرشيف العربي">
-<button id="authTheme" class="authTheme" type="button" onclick="toggleTheme()" aria-label="تغيير الثيم">☀</button>
-<div class="authLines topLines"></div><div class="authHalo"></div>
-<div class="arabicCrest" aria-hidden="true"><div class="crestPaper"><span>العربي</span></div></div>
-<h1>أرشيف العربي</h1><p>مستنداتك بأمان</p>
-<div class="fingerSeal" aria-hidden="true">⌁</div><strong>افتح الأرشيف بالبصمة</strong>
-<button class="authPrimary" type="button" onclick="Archive.unlockApp()"><span>◉</span> فتح بالبصمة</button>
-<button class="authSecondary" type="button" onclick="Archive.unlockApp()"><span>▣</span> استخدام رمز قفل الهاتف</button>
-<small>رمز PIN أو كلمة مرور الجهاز</small><div class="secureNote">♢ التحقق الآمن عبر Android</div><div class="authLines bottomLines"></div>
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <link rel="stylesheet" href="theme.css">
+</head>
+<body>
+<div id="appShell">
+<div class="status-preview" aria-hidden="true">
+  <span>12:30</span>
+  <span class="status-icons">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 8.5 12 20 23 8.5A16 16 0 0 0 1 8.5Z"/></svg>
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M2 9a15 15 0 0 1 20 0l-2 2a12 12 0 0 0-16 0L2 9Zm4 4a9 9 0 0 1 12 0l-2 2a6 6 0 0 0-8 0l-2-2Zm4 4a3 3 0 0 1 4 0l-2 3-2-3Z"/></svg>
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M5 3h14v18H5z"/><path d="M8 1h8v2H8z" fill="#06101A"/></svg>
+  </span>
 </div>
-<header class="topbar"><button class="iBtn" onclick="drawer(true)" title="القائمة"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h11"/></svg></button><button id="themeToggle" class="iBtn themeToggle" onclick="toggleTheme()" aria-label="تفعيل الثيم الفاتح" title="تغيير الثيم"></button><div class="logo"><img src="app_icon.png" alt=""><div><b>أرشيف العربي</b><small>مساحتك الخاصة · 9.0</small></div></div><button class="iBtn" onclick="openBackupMenu()" title="النسخ والاستعادة"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4m0 0L8 8m4-4 4 4M5 14v5h14v-5"/></svg></button></header>
-<section class="hero compactHero"><div class="heroBrand"><span class="docGold">▤</span><div><b>أرشيف العربي</b><small>مستنداتك في مكان واحد</small></div></div><div class="statsRow"><div><strong id="total">0</strong><span>ملف</span></div><div><strong id="gCount">0</strong><span>مجموعات</span></div></div></section>
-<main class="content"><div id="homePanel"><div id="folderHeading" class="folderHeading" hidden></div><div id="nestedGroups" class="nestedGroups" hidden></div><div class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg><input id="search" placeholder="ابحث باسم الملف أو الكلمات المفتاحية" aria-label="بحث في الأرشيف" oninput="reload()"></div><div class="tools"><button class="round scanBtn" onclick="Archive.scanDocument()" title="مسح بالكاميرا" aria-label="مسح مستند بالكاميرا">📷</button><button class="round primary" onclick="Archive.addDocument()" title="إضافة ملف"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button><button class="round" onclick="openGroups()" title="المجموعات"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h7l2 2h9v10H3z"/></svg></button><button class="round" onclick="Archive.addGroup()" title="مجموعة جديدة"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h7l2 2h9v10H3zM16 4v6m-3-3h6"/></svg></button><button class="round" onclick="openBackupMenu()" title="النسخ والاستعادة"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 18h11a4 4 0 0 0 0-8 6 6 0 0 0-11-2 5 5 0 0 0 0 10Z"/></svg></button></div><section id="homeGroupSection" class="homeGroupSection"><div class="homeGroupsTitle"><div><small>ملفاتك منظمة</small><b>مجلداتك</b></div><button onclick="openGroups()" aria-label="عرض جميع المجموعات">كل المجلدات <span>‹</span></button></div><div id="homeGroupGrid" class="homeGroupGrid"></div></section><div class="chips" id="chips"></div><div id="filesHeading" class="sectionTitle"><b>ملفاتي</b><span id="resultCount">0</span></div><div class="docs" id="docs"></div></div><section id="groupsPanel" class="groupsPanel" hidden><div class="groupPanelHead"><div><span>▦ مجموعاتك</span><h2>مكتبتك الخاصة</h2><p>افتح مجلدًا واستكشف ملفاتك</p></div><button class="addFolder" onclick="Archive.addGroup()" aria-label="إنشاء مجموعة">＋</button></div><div class="groupGrid" id="groupGrid"></div></section></main>
-<button class="fab" onclick="Archive.addDocument()" title="إضافة"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M12 5v14M5 12h14"/></svg></button><nav class="bottom" aria-label="التنقل"><button class="nav active" data-tab="home" onclick="allDocs()" title="الرئيسية"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 11 9-8 9 8v9H5v-9"/></svg><span>الرئيسية</span></button><button class="nav" data-tab="groups" onclick="openGroups()" title="المجموعات"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h7l2 2h9v10H3z"/></svg><span>المجموعات</span></button><button class="nav" data-tab="drive" onclick="backupNow()" title="Drive"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 18h11a4 4 0 0 0 0-8 6 6 0 0 0-11-2 5 5 0 0 0 0 10Z"/></svg><span>Drive</span></button></nav>
-<div class="shade" id="shade" onclick="closeLayers()"></div><aside class="drawer" id="drawer"><div class="drawerHead"><img src="app_icon.png"><div><b>أرشيف العربي</b><small>مستنداتك منظمة وآمنة</small></div></div><div class="drawerMenu"><button onclick="allDocs()">⌂ &nbsp; الرئيسية</button><button onclick="openGroups()">▦ &nbsp; المجموعات</button><button onclick="openBackupMenu()">☁ &nbsp; النسخ والاستعادة</button><button onclick="toast('الإصدار 8.0.0')">ⓘ &nbsp; التطبيق</button></div></aside>
-<section class="sheet backupSheet" id="backupSheet" aria-label="النسخ والاستعادة"><div class="sheetTop"><b>النسخ والاستعادة</b><button class="mini" onclick="closeLayers()" aria-label="إغلاق">✕</button></div><p>اختر مجلد Google Drive لمزامنة الملفات في مجموعاتها. بعد حذف التطبيق يمكنك فتح أحدث ملف استعادة ZIP من المجلد نفسه.</p><button class="backupOption" onclick="closeLayers();Archive.connectFolder()"><span>☁</span><div><b>ربط مجلد Google Drive</b><small>نسخ الملفات تلقائيًا عند إضافتها</small></div></button><button class="backupOption" onclick="closeLayers();Archive.backup()"><span>⬇</span><div><b>حفظ نسخة ZIP كاملة</b><small>الملفات والمجموعات والأسماء والملاحظات</small></div></button><button class="backupOption" onclick="closeLayers();Archive.restore()"><span>↺</span><div><b>استعادة من نسخة ZIP</b><small>بعد إعادة التثبيت، اختر أحدث نسخة</small></div></button></section><section class="sheet" id="groupsSheet"><div class="sheetTop"><b>المجموعات</b><div><button class="mini" onclick="Archive.addGroup()" title="مجموعة جديدة"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></button></div></div><div class="groupList" id="groupList"></div></section><div class="toast" id="toast"></div>
-<script src="ui.js"></script></body></html>
+<div id="authScreen" class="auth-screen">
+  <button id="authTheme" class="auth-theme" type="button" onclick="toggleTheme()" aria-label="تغيير الثيم">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"/></svg>
+  </button>
+  <img class="auth-gold-lines auth-gold-lines-top" src="gold-lines-top.svg" alt="">
+  <img class="auth-gold-lines auth-gold-lines-bottom" src="gold-lines-bottom.svg" alt="">
+  <img src="araby-premium-emblem.webp" class="auth-emblem-image" alt="العربي">
+  <h1>أرشيف العربي</h1>
+  <p>مستنداتك بأمان</p>
+  <div class="fingerprint">
+    <svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+      <path d="M15 34c0-10 7-18 17-18 9 0 17 7 17 17v10"/>
+      <path d="M22 35c0-7 4-12 10-12 7 0 11 5 11 12v9"/>
+      <path d="M28 36c0-4 2-7 5-7 3 0 5 3 5 7v15"/>
+      <path d="M12 44c2-3 3-6 3-10M18 50c4-5 5-10 5-16M25 55c3-6 5-12 5-20M36 55c2-6 3-12 3-19M43 48c2-4 3-8 3-13M50 40c0-2 0-5-1-8"/>
+    </svg>
+  </div>
+  <strong>افتح الأرشيف بالبصمة</strong>
+  <button class="auth-primary" type="button" onclick="Archive.unlockApp()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="9"/><path d="M8 12c0-3 2-5 4-5s4 2 4 5v4M11 12c0-1 1-2 2-2s2 1 2 2v5M14 17v2M7 16c1-2 1-4 1-5"/></svg>
+    فتح بالبصمة
+  </button>
+  <button class="auth-secondary" type="button" onclick="Archive.unlockApp()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/></svg>
+    استخدام رمز قفل الهاتف
+  </button>
+  <small>رمز PIN أو كلمة مرور الجهاز</small>
+  <div class="secure-note">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 5 6v5c0 5 3 8 7 10 4-2 7-5 7-10V6z"/><path d="m9 12 2 2 4-4"/></svg>
+    التحقق الآمن عبر Android
+  </div>
+</div>
+
+<header class="app-header">
+  <button class="header-btn header-menu" type="button" onclick="drawer(true)" aria-label="القائمة">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h11"/></svg>
+  </button>
+  <div class="brand">
+    <img class="brand-mark" src="araby-premium-emblem.webp" alt="">
+    <div><b>أرشيف العربي</b><small>مساحتك الخاصة · 9.0.1</small></div>
+  </div>
+  <button id="themeToggle" class="header-btn header-theme" type="button" onclick="toggleTheme()" aria-label="تغيير الثيم"></button>
+</header>
+
+<main id="appMain" class="main-content">
+  <section id="homeScreen" class="screen screen-home">
+    <section class="stats" aria-label="إحصاءات الأرشيف">
+      <article class="stat-card">
+        <strong id="documentCount">0</strong>
+        <div class="stat-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2h8l4 4v16H6zM14 2v5h5"/></svg><span>ملف</span></div>
+      </article>
+      <article class="stat-card">
+        <strong id="groupCount">0</strong>
+        <div class="stat-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h7l2 2h9v10H3z"/></svg><span>مجموعات</span></div>
+      </article>
+    </section>
+
+    <label class="search-box" for="homeSearch">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+      <input id="homeSearch" type="search" placeholder="ابحث عن مستند..." oninput="reload()">
+    </label>
+
+    <section class="groups-section">
+      <div class="section-heading">
+        <h2>المجموعات</h2>
+        <button type="button" onclick="openGroups()">عرض الكل</button>
+      </div>
+      <div id="homeFolderStrip" class="folder-strip"></div>
+    </section>
+
+    <section class="recent-section">
+      <div class="section-heading">
+        <h2>أحدث المستندات</h2>
+        <button type="button" onclick="showAllDocuments()">عرض الكل</button>
+      </div>
+      <div id="homeDocumentList" class="document-list"></div>
+    </section>
+  </section>
+
+  <section id="groupsScreen" class="screen" hidden>
+    <label class="search-box" for="groupSearch">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+      <input id="groupSearch" type="search" placeholder="ابحث عن مجموعة..." oninput="filterGroups()">
+    </label>
+    <div class="groups-title">
+      <h1>المجموعات</h1>
+      <button type="button" class="group-add" onclick="Archive.addGroup()" aria-label="إضافة مجموعة">＋</button>
+    </div>
+    <div id="groupGrid" class="groups-grid"></div>
+  </section>
+
+  <section id="folderScreen" class="screen" hidden>
+    <div class="folder-toolbar">
+      <button type="button" onclick="openGroups()" aria-label="رجوع">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+      </button>
+      <div id="folderBreadcrumb">المجموعات / العمل</div>
+      <button id="folderTheme" type="button" onclick="toggleTheme()" aria-label="تغيير الثيم"></button>
+    </div>
+    <div class="folder-summary">
+      <div id="folderIcon" class="summary-folder"></div>
+      <div><h1 id="folderName">العمل</h1><p id="folderMeta">0 ملف • 0 فروع</p></div>
+    </div>
+    <section id="subfolderSection" class="subfolder-section">
+      <h2>الفروع</h2>
+      <div id="subfolderGrid" class="subfolder-grid"></div>
+    </section>
+    <section class="folder-documents">
+      <h2>المستندات</h2>
+      <label class="search-box" for="folderSearch">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+        <input id="folderSearch" type="search" placeholder="ابحث عن مستند في هذا المجلد..." oninput="reload()">
+      </label>
+      <div id="folderDocumentList" class="document-list"></div>
+    </section>
+  </section>
+
+  <section id="backupScreen" class="screen" hidden>
+    <div class="backup-heading"><h1>النسخ والاستعادة</h1></div>
+    <article class="backup-status">
+      <div class="backup-status-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7h7l2 2h9v10H3z"/></svg>
+      </div>
+      <div><span>مجلد النسخ الاحتياطي</span><strong id="backupStatus">غير مرتبط</strong></div>
+      <button type="button" onclick="Archive.connectFolder()">ربط مجلد</button>
+    </article>
+    <div class="backup-actions">
+      <button type="button" onclick="Archive.backup()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>
+        <span><b>حفظ نسخة ZIP كاملة</b><small>إنشاء نسخة احتياطية من جميع الملفات والمجلدات</small></span>
+      </button>
+      <button type="button" onclick="Archive.restore()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21V9M7 14l5-5 5 5M5 3h14"/></svg>
+        <span><b>استعادة نسخة ZIP</b><small>استعادة الملفات من نسخة احتياطية سابقة</small></span>
+      </button>
+      <button type="button" onclick="Archive.connectFolder()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h7l2 2h9v10H3z"/><path d="m10 14 2 2 5-5"/></svg>
+        <span><b>نسخ إلى المجلد</b><small>نسخ الملفات إلى مجلد خارجي في جهازك</small></span>
+      </button>
+    </div>
+    <article class="backup-info">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8v.01"/></svg>
+      <div><b>احتفظ بنسخة احتياطية خارج التطبيق</b><p>ينصح بحفظ نسخة من ملفاتك في مكان آمن على جهازك أو في وحدة تخزين خارجية لحماية بياناتك من الفقدان.</p></div>
+    </article>
+  </section>
+</main>
+
+<div class="floating-actions">
+  <button id="cameraFab" class="camera-fab" type="button" onclick="Archive.scanDocument()" aria-label="مسح بالكاميرا">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 7h3l2-3h6l2 3h3v13H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+  </button>
+  <button id="addFab" class="add-fab" type="button" onclick="Archive.addDocument()" aria-label="إضافة مستند">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 5v14M5 12h14"/></svg>
+  </button>
+</div>
+
+<nav class="bottom-nav" aria-label="التنقل">
+  <button type="button" class="nav-item active" data-tab="home" onclick="showHome()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 11 9-8 9 8v9H5v-9"/></svg><span>الرئيسية</span>
+  </button>
+  <button type="button" class="nav-item" data-tab="groups" onclick="openGroups()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h7l2 2h9v10H3z"/></svg><span>المجموعات</span>
+  </button>
+  <button type="button" class="nav-item" data-tab="favorites" onclick="showFavorites()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/></svg><span>المفضلة</span>
+  </button>
+  <button type="button" class="nav-item" data-tab="backup" onclick="openBackup()">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>النسخ</span>
+  </button>
+</nav>
+
+<div id="shade" class="shade" onclick="closeDrawer()"></div>
+<aside id="drawer" class="drawer">
+  <div class="drawer-head"><div class="drawer-mark">العربي</div><div><b>أرشيف العربي</b><small>مستنداتك منظمة وآمنة</small></div></div>
+  <button type="button" onclick="showHome()">الرئيسية</button>
+  <button type="button" onclick="openGroups()">المجموعات</button>
+  <button type="button" onclick="openBackup()">النسخ والاستعادة</button>
+  <button type="button" onclick="toast('الإصدار 9.0.1')">معلومات التطبيق</button>
+</aside>
+<div id="toast" class="toast"></div>
+</div>
+<script src="ui.js"></script>
+</body>
+</html>

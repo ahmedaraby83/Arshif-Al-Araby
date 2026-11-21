@@ -8,6 +8,7 @@ import java.util.*;
 public class ArchiveDb extends SQLiteOpenHelper {
     public static class Item {
         long id; String title, groupName, notes, tags, fileName, mime, createdAt, backupKey;
+        boolean favorite;
     }
     public static class Group { String name,parent; Group(String n,String p){name=n;parent=p;} }
 
@@ -49,12 +50,26 @@ public class ArchiveDb extends SQLiteOpenHelper {
     List<String> descendants(String root){List<String> all=new ArrayList<>();all.add(root);boolean changed=true;while(changed){changed=false;for(Group g:groupTree())if(g.parent!=null&&all.contains(g.parent)&&!all.contains(g.name)){all.add(g.name);changed=true;}}return all;}
     List<Item> search(String q, String group) {
         List<Item> out=new ArrayList<>(); String like="%"+q+"%";
-        String sql="SELECT id,title,group_name,notes,tags,file_name,mime,created_at,backup_key FROM items WHERE (title LIKE ? OR notes LIKE ? OR tags LIKE ? OR file_name LIKE ?)";
+        String sql="SELECT id,title,group_name,notes,tags,file_name,mime,created_at,backup_key,favorite FROM items WHERE (title LIKE ? OR notes LIKE ? OR tags LIKE ? OR file_name LIKE ?)";
         List<String> args=new ArrayList<>(Arrays.asList(like,like,like,like));
         if(group!=null && !group.isEmpty()){List<String> names=descendants(group);sql+=" AND group_name IN (";for(int x=0;x<names.size();x++){if(x>0)sql+=",";sql+="?";args.add(names.get(x));}sql+=")";} sql+=" ORDER BY id DESC";
         Cursor c=getReadableDatabase().rawQuery(sql,args.toArray(new String[0]));
-        while(c.moveToNext()) { Item i=new Item(); i.id=c.getLong(0);i.title=c.getString(1);i.groupName=c.getString(2);i.notes=c.getString(3);i.tags=c.getString(4);i.fileName=c.getString(5);i.mime=c.getString(6);i.createdAt=c.getString(7);i.backupKey=c.getString(8);out.add(i); }
+        while(c.moveToNext()) { Item i=new Item(); i.id=c.getLong(0);i.title=c.getString(1);i.groupName=c.getString(2);i.notes=c.getString(3);i.tags=c.getString(4);i.fileName=c.getString(5);i.mime=c.getString(6);i.createdAt=c.getString(7);i.backupKey=c.getString(8);i.favorite=c.getInt(9)!=0;out.add(i); }
         c.close(); return out;
+    }
+    boolean toggleFavorite(long id){
+        SQLiteDatabase d=getWritableDatabase();
+        Cursor c=d.rawQuery("SELECT favorite FROM items WHERE id=?",new String[]{String.valueOf(id)});
+        int current=0;
+        try{if(c.moveToFirst())current=c.getInt(0);}finally{c.close();}
+        ContentValues v=new ContentValues();
+        v.put("favorite",current==0?1:0);
+        return d.update("items",v,"id=?",new String[]{String.valueOf(id)})==1;
+    }
+    boolean edit(long id,String title,String notes,String tags,String group){
+        ContentValues v=new ContentValues();
+        v.put("title",title);v.put("notes",notes);v.put("tags",tags);v.put("group_name",group);
+        return getWritableDatabase().update("items",v,"id=?",new String[]{String.valueOf(id)})==1;
     }
     boolean move(long id,String destination){
         SQLiteDatabase d=getWritableDatabase();d.beginTransaction();
